@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "workout": {
+      "title": "Workout",
+      "description": "A daily workout log containing multiple exercises.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "exercises": {
+          "type": "array",
+          "items": { "type": "object", "$ref": "#/entities/exerciseEntry" }
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "totalVolume": { "type": "number" },
+            "totalReps": { "type": "number" }
+          }
+        }
+      },
+      "required": ["userId", "date", "exercises"]
+    },
+    "exerciseEntry": {
+      "title": "Exercise Entry",
+      "description": "An entry for a specific exercise in a workout.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "sets": {
+          "type": "array",
+          "items": { "type": "object", "$ref": "#/entities/setEntry" }
+        }
+      }
+    },
+    "setEntry": {
+      "title": "Set Entry",
+      "description": "A single set of an exercise.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reps": { "type": "number" },
+        "weight": { "type": "number" },
+        "isPR": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}/workouts/{workoutId}": {
+      "schema": "workout",
+      "description": "Individual workouts for a user."
+    }
+  }
+}

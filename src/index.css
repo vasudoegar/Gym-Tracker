@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=JetBrains+Mono:wght@100..800&family=Space+Grotesk:wght@300..700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-primary: #A3E635; /* Lime 400 */
+  --color-brand-secondary: #818CF8; /* Indigo 400 */
+}
+
+body {
+  @apply bg-[#030712] text-slate-300 antialiased selection:bg-lime-400 selection:text-black;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(163, 230, 53, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(129, 140, 248, 0.03) 0px, transparent 50%);
+}
+
+.glass-card {
+  @apply bg-slate-900/40 border border-slate-800/60 rounded-3xl backdrop-blur-xl transition-all duration-500;
+}
+
+.glass-card:hover {
+  @apply border-slate-700/60 bg-slate-900/60 shadow-[0_0_40px_-15px_rgba(0,0,0,0.5)];
+}
+
+.neo-button {
+  @apply relative overflow-hidden transition-all duration-300 active:scale-95 disabled:opacity-50;
+}
+
+.text-glow {
+  text-shadow: 0 0 15px rgba(163, 230, 53, 0.3);
+}
+
+.input-glow {
+  @apply transition-all duration-300 focus:shadow-[0_0_20px_-5px_rgba(163,230,53,0.2)] focus:border-lime-400/50;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-950;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-800 rounded-full hover:bg-slate-700 transition-colors;
+}
+
