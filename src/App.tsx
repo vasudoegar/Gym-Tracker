@@ -41,6 +41,7 @@ const googleProvider = new GoogleAuthProvider();
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [draftWorkout, setDraftWorkout] = useState<WorkoutLog | null>(null);
@@ -111,6 +112,7 @@ export default function App() {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (user) {
+        setError(null);
         const q = query(
           collection(db, `users/${user.uid}/workouts`),
           orderBy('date', 'desc')
@@ -124,6 +126,7 @@ export default function App() {
           setLoading(false);
         }, (error) => {
           console.error("Firestore error:", error);
+          setError("Failed to sync data. Please check your connection.");
           setLoading(false);
         });
         return unsub;
@@ -136,10 +139,18 @@ export default function App() {
   }, []);
 
   const handleLogin = async () => {
+    setError(null);
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Login failed:", error);
+    } catch (err: any) {
+      console.error("Login failed:", err);
+      if (err.code === 'auth/unauthorized-domain') {
+        setError("Domain Unauthorized: Add this URL to 'Authorized domains' in Firebase Console.");
+      } else if (err.code === 'auth/popup-blocked') {
+        setError("Popup Blocked: Please allow popups for this site.");
+      } else {
+        setError(err.message || "Authentication failed.");
+      }
     }
   };
 
@@ -283,6 +294,11 @@ export default function App() {
             </div>
 
             <div className="space-y-4">
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest p-4 rounded-2xl animate-in fade-in slide-in-from-top-1 duration-300">
+                  {error}
+                </div>
+              )}
               <button 
                 onClick={handleLogin}
                 className="w-full py-4.5 bg-white text-black rounded-3xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-4 hover:bg-lime-400 transition-all duration-300 shadow-[0_20px_40px_-15px_rgba(255,255,255,0.2)] active:scale-95 group"
