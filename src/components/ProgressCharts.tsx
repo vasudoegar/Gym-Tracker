@@ -82,7 +82,14 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
   const labelDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
     logs.forEach(log => {
-      const label = log.label || 'CUSTOM';
+      let label = (log.label || 'CUSTOM').toUpperCase();
+      if (label.includes('PUSH') || label.includes('CHEST') || label.includes('SHOULDER') || label.includes('TRICEP')) {
+        label = 'PUSH';
+      } else if (label.includes('PULL') || label.includes('BACK') || label.includes('BICEP')) {
+        label = 'PULL';
+      } else if (label.includes('LEGS') || label.includes('LOWER') || label.includes('QUAD') || label.includes('HAM')) {
+        label = 'LEGS';
+      }
       counts[label] = (counts[label] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
@@ -237,7 +244,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
         {mode === 'exercise' ? (
           <>
             {/* Theoretical Peak (E1RM) */}
-            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] transition-transform duration-500">
+            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] hover:bg-slate-900/40 transition-all duration-500">
               <h3 className="text-[9px] font-black text-lime-400 uppercase tracking-[0.4em] mb-6 md:mb-10 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-lime-400 rounded-full animate-ping" />
                 Theoretical Peak (E1RM)
@@ -262,7 +269,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
             </div>
 
             {/* Max Weight Lifted */}
-            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] transition-transform duration-500">
+            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] hover:bg-slate-900/40 transition-all duration-500">
               <h3 className="text-[9px] font-black text-amber-400 uppercase tracking-[0.4em] mb-6 md:mb-10 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
                 Max Weight Lifted (kg)
@@ -277,7 +284,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
                       contentStyle={{ backgroundColor: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', padding: '12px 16px' }}
                       itemStyle={{ color: '#FBBF24', fontSize: '10px', fontWeight: '900' }}
                       labelStyle={{ display: 'none' }}
-                      cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                      cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
                     />
                     <Bar dataKey="maxWeight" fill="#FBBF24" radius={[8, 8, 0, 0]} barSize={20} />
                   </BarChart>
@@ -286,7 +293,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
             </div>
 
             {/* Total Exercise Volume */}
-            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] transition-transform duration-500">
+            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] hover:bg-slate-900/40 transition-all duration-500">
               <h3 className="text-[9px] font-black text-lime-400 uppercase tracking-[0.4em] mb-6 md:mb-10 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-lime-400 rounded-full" />
                 Total Exercise Volume (kg)
@@ -309,7 +316,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
             </div>
 
             {/* Total Repetitions */}
-            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] transition-transform duration-500">
+            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] hover:bg-slate-900/40 transition-all duration-500">
               <h3 className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-6 md:mb-10 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
                 Total Repetitions
@@ -332,7 +339,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
             </div>
 
             {/* Intensity Tracker */}
-            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] transition-transform duration-500 lg:col-span-2">
+            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] hover:bg-slate-900/40 transition-all duration-500 lg:col-span-2">
               <h3 className="text-[9px] font-black text-cyan-400 uppercase tracking-[0.4em] mb-6 md:mb-10 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full" />
                 Intensity Coefficient (Avg Weight/Rep)
@@ -347,7 +354,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
                       contentStyle={{ backgroundColor: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', padding: '12px 16px' }}
                       itemStyle={{ color: '#22D3EE', fontSize: '10px', fontWeight: '900' }}
                       labelStyle={{ display: 'none' }}
-                      cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                      cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
                     />
                     <Bar dataKey="avgWeightPerRep" fill="#22D3EE" radius={[8, 8, 0, 0]} barSize={20} />
                   </BarChart>
@@ -358,7 +365,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
         ) : (
           <>
             {/* Daily Volume Analytics */}
-            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] transition-transform duration-500 lg:col-span-2">
+            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] hover:bg-slate-900/40 transition-all duration-500 lg:col-span-2">
               <h3 className="text-[9px] font-black text-rose-400 uppercase tracking-[0.4em] mb-6 md:mb-10 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
                 Daily Workload (Total kg)
@@ -381,7 +388,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
             </div>
 
             {/* PPL Volume Ratio */}
-            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] transition-transform duration-500">
+            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] hover:bg-slate-900/40 transition-all duration-500">
                <h3 className="text-[9px] font-black text-lime-400 uppercase tracking-[0.4em] mb-6 md:mb-10 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-lime-400 rounded-full" />
                 Force Vector Distribution (PPL Ratio)
@@ -415,7 +422,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {pplVolumeRatio.map((entry, index) => (
-                  <div key={entry.name} className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl border border-white/5">
+                  <div key={entry.name} className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: [ '#A3E635', '#818CF8', '#FB7185', '#FACC15'][index % 4] }} />
                     <div className="text-[8px] font-black uppercase tracking-widest text-slate-400">{entry.name}</div>
                   </div>
@@ -424,7 +431,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
             </div>
 
             {/* Set Density & Protocol Split */}
-            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] transition-transform duration-500">
+            <div className="glass-card p-5 sm:p-8 bg-slate-950/20 border-white/5 transform hover:scale-[1.01] hover:bg-slate-900/40 transition-all duration-500">
               <h3 className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-6 md:mb-10 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
                 Protocol Distribution (Total Sessions)
@@ -438,7 +445,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#0f172a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', padding: '12px 16px' }}
                       itemStyle={{ color: '#818CF8', fontSize: '10px', fontWeight: '900' }}
-                      cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                      cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
                     />
                     <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={20}>
                       {labelDistribution.map((entry, index) => (
