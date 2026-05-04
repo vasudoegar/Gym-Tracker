@@ -20,9 +20,9 @@ import {
   PieChart,
   Pie
 } from 'recharts';
-import { LineChart as LineChartIcon, ChevronDown, Search, X, Activity, BarChart3, Target, TrendingUp } from 'lucide-react';
+import { LineChart as LineChartIcon, ChevronDown, Search, X, Activity, BarChart3, Target, TrendingUp, Filter, Calendar, ChevronRight } from 'lucide-react';
 import { WorkoutLog, ExerciseEntry } from '../types';
-import { format, parseISO, startOfWeek, endOfWeek } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, subDays, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '../lib/utils';
 
 interface ProgressChartsProps {
@@ -36,6 +36,48 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // New states for filtering
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all' | 'custom'>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [selectedLabel, setSelectedLabel] = useState<string>('ALL');
+
+  const filteredLogs = useMemo(() => {
+    let result = [...logs];
+
+    // Filter by Date Range
+    if (dateRange !== 'all') {
+      const now = new Date();
+      let limit: Date | null = null;
+      
+      if (dateRange === '7d') limit = subDays(now, 7);
+      else if (dateRange === '30d') limit = subDays(now, 30);
+      else if (dateRange === '90d') limit = subDays(now, 90);
+      else if (dateRange === 'custom') {
+        if (startDate) result = result.filter(log => isAfter(parseISO(log.date), startOfDay(parseISO(startDate))) || log.date.startsWith(startDate));
+        if (endDate) result = result.filter(log => isBefore(parseISO(log.date), endOfDay(parseISO(endDate))) || log.date.startsWith(endDate));
+      }
+
+      if (limit && dateRange !== 'custom') {
+        result = result.filter(log => isAfter(parseISO(log.date), startOfDay(limit!)));
+      }
+    }
+
+    // Filter by Label
+    if (selectedLabel !== 'ALL') {
+      result = result.filter(log => {
+        const label = (log.label || 'CUSTOM').toUpperCase();
+        if (selectedLabel === 'PUSH') return label.includes('PUSH') || label.includes('CHEST') || label.includes('SHOULDER') || label.includes('TRICEP');
+        if (selectedLabel === 'PULL') return label.includes('PULL') || label.includes('BACK') || label.includes('BICEP');
+        if (selectedLabel === 'LEGS') return label.includes('LEGS') || label.includes('LOWER') || label.includes('QUAD') || label.includes('HAM');
+        if (selectedLabel === 'OTHER') return !label.includes('PUSH') && !label.includes('PULL') && !label.includes('LEGS');
+        return label === selectedLabel;
+      });
+    }
+
+    return result;
+  }, [logs, dateRange, startDate, endDate, selectedLabel]);
 
   useEffect(() => {
     if (!selectedExercise && exerciseNames.length > 0) {
@@ -60,7 +102,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
   }, [exerciseNames, searchQuery]);
 
   const dailyData = useMemo(() => {
-    return logs
+    return filteredLogs
       .map(log => {
         const totalVolume = log.exercises.reduce((acc, ex) => {
           return acc + ex.sets.reduce((setAcc, s) => setAcc + (s.weight * s.reps), 0);
@@ -77,11 +119,11 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
         };
       })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [logs]);
+  }, [filteredLogs]);
 
   const labelDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
-    logs.forEach(log => {
+    filteredLogs.forEach(log => {
       let label = (log.label || 'CUSTOM').toUpperCase();
       if (label.includes('PUSH') || label.includes('CHEST') || label.includes('SHOULDER') || label.includes('TRICEP')) {
         label = 'PUSH';
@@ -93,12 +135,12 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
       counts[label] = (counts[label] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [logs]);
+  }, [filteredLogs]);
 
   const pplVolumeRatio = useMemo(() => {
     const volumes = { PUSH: 0, PULL: 0, LEGS: 0, OTHER: 0 };
     
-    logs.forEach(log => {
+    filteredLogs.forEach(log => {
       const logVolume = log.exercises.reduce((acc, ex) => {
         return acc + ex.sets.reduce((setAcc, s) => setAcc + (s.weight * s.reps), 0);
       }, 0);
@@ -119,12 +161,12 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
     return Object.entries(volumes)
       .filter(([_, value]) => value > 0)
       .map(([name, value]) => ({ name, value }));
-  }, [logs]);
+  }, [filteredLogs]);
 
   const data = useMemo(() => {
     if (!selectedExercise) return [];
 
-    return logs
+    return filteredLogs
       .filter(log => log.exercises.some(ex => ex.name === selectedExercise))
       .map(log => {
         const exercise = log.exercises.find(ex => ex.name === selectedExercise);
@@ -149,7 +191,7 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
         };
       })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [logs, selectedExercise]);
+  }, [filteredLogs, selectedExercise]);
 
   if (exerciseNames.length === 0) {
     return (
@@ -174,70 +216,148 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
           </p>
         </div>
         
-        {mode === 'exercise' && (
-          <div className="relative w-full md:w-[400px]" ref={dropdownRef}>
-            <div 
-              className={cn(
-                "relative bg-slate-900 border border-white/5 rounded-2xl transition-all shadow-2xl overflow-hidden pt-7 pb-2 px-6",
-                isOpen && "ring-1 ring-lime-400 border-lime-400/20 bg-slate-800"
-              )}
-            >
-              <div className="absolute top-2.5 left-6 text-[8px] font-black text-lime-400 uppercase tracking-widest pointer-events-none opacity-50">
-                Select Exercise Entry
-              </div>
-              <div className="flex items-center gap-3">
-                <Search className="w-3.5 h-3.5 text-lime-400/50" />
-                <input
-                  type="text"
-                  placeholder="Find protocol..."
-                  value={isOpen ? searchQuery : selectedExercise}
-                  onFocus={() => {
-                    setIsOpen(true);
-                    setSearchQuery('');
-                  }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent border-none outline-none font-black text-[11px] uppercase tracking-wider text-white placeholder:text-slate-700"
-                />
-                <button 
-                  onClick={() => setIsOpen(!isOpen)}
-                  className="text-slate-600 hover:text-white transition-colors"
-                >
-                  <ChevronDown className={cn("w-4 h-4 transition-transform duration-300", isOpen && "rotate-180")} />
-                </button>
-              </div>
-            </div>
-
-            {isOpen && (
-              <div className="absolute top-full left-0 right-0 mt-3 bg-slate-900 border border-white/10 rounded-2xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.8)] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="max-h-[300px] overflow-y-auto py-2 custom-scrollbar">
-                  {filteredExercises.length > 0 ? (
-                    filteredExercises.map(name => (
-                      <button
-                        key={name}
-                        onClick={() => {
-                          setSelectedExercise(name);
-                          setIsOpen(false);
-                        }}
-                        className={cn(
-                          "w-full text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-all border-l-2",
-                          selectedExercise === name 
-                            ? "bg-lime-400/10 border-lime-400 text-lime-400" 
-                            : "border-transparent text-slate-500 hover:bg-white/5 hover:text-white"
-                        )}
-                      >
-                        {name}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-6 py-8 text-center text-slate-700 text-[9px] font-black uppercase tracking-widest italic">
-                      No matching protocol found
-                    </div>
-                  )}
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          {mode === 'exercise' && (
+            <div className="relative w-full sm:w-[300px]" ref={dropdownRef}>
+              <div 
+                className={cn(
+                  "relative bg-slate-900 border border-white/5 rounded-2xl transition-all shadow-2xl overflow-hidden pt-7 pb-2 px-6",
+                  isOpen && "ring-1 ring-lime-400 border-lime-400/20 bg-slate-800"
+                )}
+              >
+                <div className="absolute top-2.5 left-6 text-[8px] font-black text-lime-400 uppercase tracking-widest pointer-events-none opacity-50">
+                  Select Exercise Entry
+                </div>
+                <div className="flex items-center gap-3">
+                  <Search className="w-3.5 h-3.5 text-lime-400/50" />
+                  <input
+                    type="text"
+                    placeholder="Find protocol..."
+                    value={isOpen ? searchQuery : selectedExercise}
+                    onFocus={() => {
+                      setIsOpen(true);
+                      setSearchQuery('');
+                    }}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1 bg-transparent border-none outline-none font-black text-[11px] uppercase tracking-wider text-white placeholder:text-slate-700"
+                  />
+                  <button 
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="text-slate-600 hover:text-white transition-colors"
+                  >
+                    <ChevronDown className={cn("w-4 h-4 transition-transform duration-300", isOpen && "rotate-180")} />
+                  </button>
                 </div>
               </div>
-            )}
+
+              {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-3 bg-slate-900 border border-white/10 rounded-2xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.8)] z-50 overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="max-h-[300px] overflow-y-auto py-2 custom-scrollbar">
+                    {filteredExercises.length > 0 ? (
+                      filteredExercises.map(name => (
+                        <button
+                          key={name}
+                          onClick={() => {
+                            setSelectedExercise(name);
+                            setIsOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-all border-l-2",
+                            selectedExercise === name 
+                              ? "bg-lime-400/10 border-lime-400 text-lime-400" 
+                              : "border-transparent text-slate-500 hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          {name}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-6 py-8 text-center text-slate-700 text-[9px] font-black uppercase tracking-widest italic">
+                        No matching protocol found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Filter Section */}
+      <div className="flex flex-col gap-6 p-6 bg-white/5 rounded-3xl border border-white/5">
+        <div className="flex items-center gap-2 mb-2">
+          <Filter className="w-3.5 h-3.5 text-lime-400" />
+          <h3 className="text-[9px] font-black text-lime-400 uppercase tracking-widest">Global Analytics Filters</h3>
+        </div>
+        
+        <div className="flex flex-wrap items-end gap-6">
+          {/* Date Range Selection */}
+          <div className="space-y-3">
+            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Time Horizon</label>
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-white/5">
+              {(['7d', '30d', '90d', 'all', 'custom'] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setDateRange(r)}
+                  className={cn(
+                    "px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all",
+                    dateRange === r ? "bg-lime-400 text-black shadow-lg" : "text-slate-500 hover:text-white"
+                  )}
+                >
+                  {r === 'all' ? 'Infinity' : r}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
+
+          {/* Label Selection */}
+          <div className="space-y-3">
+            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Vector Focus</label>
+            <select
+              value={selectedLabel}
+              onChange={(e) => setSelectedLabel(e.target.value)}
+              className="bg-slate-950 text-white text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl border border-white/5 outline-none focus:border-lime-400/50 transition-colors"
+            >
+              <option value="ALL">All Vectors</option>
+              <option value="PUSH">Push Focus</option>
+              <option value="PULL">Pull Focus</option>
+              <option value="LEGS">Leg Focus</option>
+              <option value="OTHER">Other Vectors</option>
+            </select>
+          </div>
+
+          {/* Custom Date Inputs */}
+          {dateRange === 'custom' && (
+            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300">
+              <div className="space-y-3">
+                <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Entry</label>
+                <div className="relative">
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-slate-950 text-white text-[10px] font-black uppercase tracking-widest pl-11 pr-4 py-3 rounded-xl border border-white/5 outline-none focus:border-lime-400/50"
+                  />
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-800 mt-8" />
+              <div className="space-y-3">
+                <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Threshold</label>
+                <div className="relative">
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" />
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="bg-slate-950 text-white text-[10px] font-black uppercase tracking-widest pl-11 pr-4 py-3 rounded-xl border border-white/5 outline-none focus:border-lime-400/50"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12">
@@ -458,12 +578,12 @@ export const ProgressCharts: React.FC<ProgressChartsProps> = ({ logs, exerciseNa
               <div className="mt-8 grid grid-cols-2 gap-4">
                 <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
                   <div className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">Total Force Days</div>
-                  <div className="text-xl font-display font-black text-white italic">{logs.length}</div>
+                  <div className="text-xl font-display font-black text-white italic">{filteredLogs.length}</div>
                 </div>
                 <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
                   <div className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">Avg Force Intensity</div>
                   <div className="text-xl font-display font-black text-white italic">
-                    {(dailyData.reduce((acc, d) => acc + d.totalVolume, 0) / (logs.length || 1)).toFixed(0)}kg
+                    {(dailyData.reduce((acc, d) => acc + d.totalVolume, 0) / (filteredLogs.length || 1)).toFixed(0)}kg
                   </div>
                 </div>
               </div>
